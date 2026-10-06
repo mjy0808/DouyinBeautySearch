@@ -64,7 +64,9 @@ BROWSER_EXECUTABLE='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome
 3. Settings → Secrets and variables → Actions → Variables 添加 `PAGES_ENABLED=true`，启用页面发布。
 4. 首次手动运行 `Daily beauty camera collection`，检查页面与采集结果。
 
-**私有仓库限制：**当前账号方案不支持本私有仓库的 GitHub Pages。保持私有时，独立每日采集照常运行，HTML 页面及数据可在每次 Actions 的 `beauty-site-*` / `beauty-data-*` artifact 下载；公开仓库并启用 Pages 后会发布在线页面。程序不会擅自修改仓库可见性。
+仓库已公开，Pages 已配置为 GitHub Actions，`PAGES_ENABLED=true` 已启用。在线地址：[镜头日记](https://mjy0808.github.io/DouyinBeautySearch/)。每次运行的 HTML 页面及数据另存为 `beauty-site-*` / `beauty-data-*` artifact。
+
+**来源实测：**2026-10-06，本机 Chrome 能读取抖音详情并采集候选；GitHub 托管运行器两次均返回 `VIDEO_UNAVAILABLE`，没有采到新候选。任务成功仅表示报告与备份流程完成，不表示抖音可访问。页面会明确显示采集受阻，并保留已核验首份清单；云端定时任务继续重试。
 
 Actions cache 保存历史和缩略图，每次运行另有 60 天的报告/数据备份。历史索引保留最近 60 个日报。首次从零恢复时会显示首份核验清单；cache 被清理后可从 artifact 恢复 `data/`，避免历史去重状态丢失。
 
