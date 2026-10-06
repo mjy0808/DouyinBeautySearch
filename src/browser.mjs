@@ -3,6 +3,13 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { parseDetail, validId, videoUrl } from './core.mjs';
 
+export function largestVisibleVideoIndex(videos) {
+  return videos.map((video, index) => {
+    const box = video.getBoundingClientRect();
+    return { index, width: box.width, height: box.height, area: box.width * box.height };
+  }).filter(value => value.width > 100 && value.height > 100).sort((a, b) => b.area - a.area)[0]?.index ?? -1;
+}
+
 export async function launchBrowser() {
   // A local bundled runtime may be supplied without changing production dependencies.
   const require = createRequire(import.meta.url);
@@ -18,7 +25,7 @@ export async function readVideo(page, id, config) {
   await page.waitForFunction(() => [...document.querySelectorAll('video')].some(v => {
     const rect = v.getBoundingClientRect(); return rect.width > 100 && rect.height > 100 && v.videoWidth > 0 && Number.isFinite(v.duration);
   }), undefined, { timeout: 8000 }).catch(() => {});
-  const index = await page.locator('video').evaluateAll(vs => vs.map((v, i) => ({ i, area: v.getBoundingClientRect().width * v.getBoundingClientRect().height })).sort((a, b) => b.area - a.area)[0]?.i ?? -1);
+  const index = await page.locator('video').evaluateAll(largestVisibleVideoIndex);
   if (index < 0) throw new Error(/安全验证|请完成.*验证|拖动滑块/.test(body) ? 'DOUYIN_VERIFICATION_REQUIRED' : 'VIDEO_UNAVAILABLE');
   const video = page.locator('video').nth(index);
   const media = await video.evaluate(v => { v.pause(); return { width: v.videoWidth, height: v.videoHeight, duration: v.duration }; });

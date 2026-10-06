@@ -56,7 +56,7 @@ export async function runPipeline({ root = '.', config, seedOnly = false, force 
         if (seen.has(id) || config.referenceIds.includes(id)) continue;
         const item = result.item;
         const rejection = metadataRejection(item, config);
-        if (rejection) { rejected[rejection] = (rejected[rejection] ?? 0) + 1; continue; }
+        if (rejection) { rejected[rejection] = (rejected[rejection] ?? 0) + 1; console.log(`${id}: ${rejection}`); continue; }
         if (!hasVision || probe) {
           if (!probe && previousCandidates.has(id)) continue;
           let thumbnail, frame_images;
@@ -71,7 +71,8 @@ export async function runPipeline({ root = '.', config, seedOnly = false, force 
             thumbnail = frame_images[1];
           }
           pending.push({ ...item, thumbnail, frame_images, aspect_ratio: aspectRatio(item.width, item.height),
-            verified_at: new Date().toISOString(), review_status: 'awaiting_visual_review' }); continue;
+            verified_at: new Date().toISOString(), review_status: 'awaiting_visual_review' });
+          console.log(`Collected candidate ${pending.length}/${config.maxPending}: ${id}`); continue;
         }
         if (reviews >= config.maxReviews) break;
         const processed = state.processed[id];
