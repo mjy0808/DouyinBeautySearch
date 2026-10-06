@@ -17,7 +17,7 @@ on:
         type: boolean
   push:
     branches: [main]
-    paths: ['src/**', 'site/**', 'seeds/**', 'config.json', 'package*.json', '.github/workflows/daily-beauty.yml']
+    paths: ['src/**', 'seeds/**', 'config.json', 'package*.json', '.github/workflows/daily-beauty.yml']
 
 permissions:
   contents: read

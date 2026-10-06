@@ -66,7 +66,7 @@ BROWSER_EXECUTABLE='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome
 
 仓库已公开，Pages 已配置为 GitHub Actions，`PAGES_ENABLED=true` 已启用。在线地址：[镜头日记](https://mjy0808.github.io/DouyinBeautySearch/)。每次运行的 HTML 页面及数据另存为 `beauty-site-*` / `beauty-data-*` artifact。
 
-`Publish saved report` 可单独发布仓库中已有的页面，供首次上线或网页恢复使用，不等待新一轮采集。日常更新仍由每日采集工作流直接发布。
+`Publish saved report` 在页面文件更新时自动发布，也可手动运行，不等待新一轮采集。发布时恢复最近成功采集的报告、历史与图片，仅使用当前代码中的页面设计；尚无采集备份时使用首份清单。日常数据更新仍由每日采集工作流直接发布。
 
 **来源实测：**2026-10-06，本机 Chrome 能读取抖音详情并采集候选；GitHub 托管运行器前两次返回 `VIDEO_UNAVAILABLE`，随后重试成功，从 42 个详情页采集了 40 条基础条件达标的候选并发布到网页。公开页面的可访问性会变化，任务成功不等于每天一定有新作品。来源受阻时页面显示实际状态，并保留已核验首份清单；云端定时任务继续重试。按用户选择，不安装本机定时任务。
 

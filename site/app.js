@@ -49,7 +49,7 @@ function card(item, index) {
     </div><div class="card-body"><div class="author-row"><span class="author" title="${escape(item.author)}">${escape(item.author)}</span><span class="likes"><span>♡</span>${count(item.likes)}</span></div>
     <p class="caption" title="${escape(item.caption)}">${escape(item.caption)}</p><span class="camera ${pending ? 'pending' : ''}" title="${escape(item.camera_note || '人物与运镜尚待核对')}">${pending ? '待核对人物与运镜' : escape(item.camera_note || '镜头变化')}</span>
     <div class="card-bottom"><span>发布 ${escape(String(item.published_at || '').slice(5, 10))}</span><a href="${url(item)}" target="_blank" rel="noopener noreferrer">原视频 ↗</a></div>
-    <div class="card-actions"><button data-action="${item.frame_images?.length ? 'preview' : 'copy'}">${item.frame_images?.length ? '查看镜头截图' : '复制视频链接'}</button><span title="${escape(item.verification || '基础指标自动核验')}" style="font-size:8px;color:#a2aa98">核验 ${escape(verified.slice(5))}</span></div></div></article>`;
+    <div class="card-actions"><button data-action="${item.frame_images?.length ? 'preview' : 'copy'}">${item.frame_images?.length ? '查看镜头截图' : '复制视频链接'}</button><span title="${escape(item.verification || '基础指标自动核验')}" style="font-size:8px;color:#a18a9a">核验 ${escape(verified.slice(5))}</span></div></div></article>`;
 }
 
 function render() {
