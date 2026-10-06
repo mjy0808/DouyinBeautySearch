@@ -1,0 +1,113 @@
+name: Daily beauty camera collection
+
+on:
+  schedule:
+    # Beijing 09:17; 11:17 is a retry slot for incomplete collection.
+    - cron: '17 1 * * *'
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: '重新采集，忽略当天已完成的精选清单'
+        default: false
+        type: boolean
+      probe:
+        description: '只检查抖音公开页面可访问性，不修改日报'
+        default: false
+        type: boolean
+  push:
+    branches: [main]
+    paths: ['src/**', 'site/**', 'seeds/**', 'config.json', 'package*.json', '.github/workflows/daily-beauty.yml']
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: daily-beauty
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Restore history and thumbnails
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: data/
+          key: beauty-state-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: beauty-state-
+      - name: Verify collector and report logic
+        run: npm test
+      - name: Install browser
+        run: npx playwright install --with-deps chromium
+      - name: Build verified initial report
+        run: npm run build
+      - name: Collect daily candidates
+        env:
+          VISION_API_KEY: ${{ secrets.VISION_API_KEY }}
+          VISION_BASE_URL: ${{ vars.VISION_BASE_URL }}
+          VISION_MODEL: ${{ vars.VISION_MODEL }}
+          VISION_API_MODE: ${{ vars.VISION_API_MODE }}
+          FORCE: ${{ inputs.force }}
+          PROBE: ${{ inputs.probe }}
+        run: |
+          args=()
+          if [ "$FORCE" = "true" ]; then args+=(--force); fi
+          if [ "$PROBE" = "true" ]; then args+=(--probe --limit 6); fi
+          node src/cli.mjs "${args[@]}"
+      - name: Save collection history
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/
+          key: beauty-state-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Upload collection backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beauty-data-${{ github.run_id }}
+          path: |
+            data/state.json
+            data/pending.json
+            data/probe.json
+            data/run-errors.json
+            data/thumbnails/
+          retention-days: 60
+          if-no-files-found: warn
+      - name: Upload website preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beauty-site-${{ github.run_id }}
+          path: site/
+          retention-days: 60
+      - name: Configure Pages
+        if: ${{ vars.PAGES_ENABLED == 'true' && inputs.probe != true }}
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        if: ${{ vars.PAGES_ENABLED == 'true' && inputs.probe != true }}
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site/
+
+  deploy:
+    needs: collect
+    if: ${{ vars.PAGES_ENABLED == 'true' && inputs.probe != true }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

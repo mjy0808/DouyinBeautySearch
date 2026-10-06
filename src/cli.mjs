@@ -1,0 +1,11 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readJson } from './storage.mjs';
+import { runPipeline } from './pipeline.mjs';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const args = process.argv.slice(2);
+const config = await readJson(path.join(root, 'config.json'));
+const limitIndex = args.indexOf('--limit');
+const pageLimit = limitIndex >= 0 ? Number(args[limitIndex + 1]) : undefined;
+if (pageLimit !== undefined && (!Number.isInteger(pageLimit) || pageLimit <= 0)) throw new Error('Invalid --limit');
+await runPipeline({ root, config, seedOnly: args.includes('--seed'), force: args.includes('--force'), probe: args.includes('--probe'), pageLimit });
