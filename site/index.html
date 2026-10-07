@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#fce0eb"><meta name="description" content="每日收集高赞、15秒以内的抖音竖屏运镜短视频，记录镜头、时长与点赞。">
   <title>美女运镜 · 每日精选</title>
-  <link rel="stylesheet" href="styles.css?v=blush-1">
+  <link rel="stylesheet" href="styles.css?v=automatic-1">
 </head>
 <body>
   <main class="wrap">
@@ -15,24 +15,23 @@
     </header>
 
     <section class="summary" aria-label="日报概览">
-      <div><span>已核验精选</span><strong id="selectedCount">—</strong><small>每日目标 20 条</small></div>
-      <div><span>最高单条点赞</span><strong id="topLikes">—</strong><small>取核验时的页面值</small></div>
+      <div><span>每日视频</span><strong id="selectedCount">—</strong><small>每日目标 20 条</small></div>
+      <div><span>最高单条点赞</span><strong id="topLikes">—</strong><small>取采集时的页面值</small></div>
       <div><span>平均时长</span><strong id="avgDuration">—</strong><small>原视频总时长</small></div>
-      <div><span>自动采集候选</span><strong id="candidateCount">—</strong><small>人物与镜头待核对</small></div>
+      <div><span>最低单条点赞</span><strong>5,000</strong><small>优先 1 万赞以上</small></div>
     </section>
 
     <div class="notice" id="notice" role="status" hidden></div>
     <section class="collection" aria-label="视频清单">
       <div class="section-head"><div><p class="eyebrow dark">YOUR DAILY INSPIRATION</p><h2>今日镜头清单 <span id="reportDate"></span></h2></div><label class="date-picker">历史日报 <select id="dateSelect" aria-label="选择日报日期"></select></label></div>
-      <div class="tabs" role="tablist" aria-label="清单分类"><button class="tab active" role="tab" id="selectedTab" aria-selected="true">精选清单 <span id="selectedBadge">0</span></button><button class="tab" role="tab" id="candidateTab" aria-selected="false">待核对 <span id="candidateBadge">0</span></button><button class="tab" role="tab" id="savedTab" aria-selected="false">我的收藏 <span id="savedBadge">0</span></button></div>
-      <div class="toolbar"><label class="search"><span aria-hidden="true">⌕</span><input type="search" id="search" placeholder="搜索作者、标题或镜头特点" aria-label="搜索视频"></label><div class="controls"><select id="likesFilter" aria-label="最低点赞"><option value="0">全部点赞</option><option value="10000">1 万赞以上</option><option value="50000">5 万赞以上</option><option value="100000">10 万赞以上</option></select><select id="sort" aria-label="排序方式"><option value="default">推荐顺序</option><option value="likes">点赞从高到低</option><option value="duration">时长从短到长</option><option value="published">发布从新到旧</option></select><button class="export" id="export">导出清单 <span aria-hidden="true">↗</span></button></div></div>
+      <div class="tabs" role="tablist" aria-label="清单分类"><button class="tab active" role="tab" id="selectedTab" aria-selected="true">每日清单 <span id="selectedBadge">0</span></button><button class="tab" role="tab" id="savedTab" aria-selected="false">我的收藏 <span id="savedBadge">0</span></button></div>
+      <div class="toolbar"><label class="search"><span aria-hidden="true">⌕</span><input type="search" id="search" placeholder="搜索作者或标题" aria-label="搜索视频"></label><div class="controls"><select id="likesFilter" aria-label="最低点赞"><option value="0">全部点赞</option><option value="10000">1 万赞以上</option><option value="50000">5 万赞以上</option><option value="100000">10 万赞以上</option></select><select id="sort" aria-label="排序方式"><option value="default">推荐顺序</option><option value="likes">点赞从高到低</option><option value="duration">时长从短到长</option><option value="published">发布从新到旧</option></select><button class="export" id="export">导出清单 <span aria-hidden="true">↗</span></button></div></div>
       <p class="result-label" id="resultLabel"></p><div class="grid" id="grid" aria-live="polite"></div>
       <div class="empty" id="empty" hidden><div>◈</div><h3>这里暂时没有视频</h3><p>换个筛选条件，或查看其他日期的清单。</p><button id="reset">重置筛选</button></div>
     </section>
-    <footer><div><span class="footer-brand">◈ 镜头日记</span><p>记录原视频时长、竖屏比例与单条点赞。点赞会变化，以每条核验时间为准。</p></div><a id="workflowLink" href="https://github.com/mjy0808/DouyinBeautySearch/actions/workflows/daily-beauty.yml" target="_blank" rel="noopener noreferrer">自动更新记录 ↗</a></footer>
+    <footer><div><span class="footer-brand">◈ 镜头日记</span><p>记录原视频时长、竖屏比例与单条点赞。点赞会变化，以每条采集时间为准。</p></div><a id="workflowLink" href="https://github.com/mjy0808/DouyinBeautySearch/actions/workflows/daily-beauty.yml" target="_blank" rel="noopener noreferrer">自动更新记录 ↗</a></footer>
   </main>
-  <dialog id="preview"><div class="dialog-head"><div><h3 id="previewTitle"></h3><p>按时间顺序查看截图，点击下方链接观看原视频。</p></div><button id="closePreview" aria-label="关闭截图预览">×</button></div><div id="previewFrames" class="preview-frames"></div><a id="previewLink" class="primary" target="_blank" rel="noopener noreferrer">打开抖音原视频 ↗</a></dialog>
   <div class="toast" id="toast" role="status" hidden></div>
-  <script src="app.js?v=blush-1" type="module"></script>
+  <script src="app.js?v=automatic-1" type="module"></script>
 </body>
 </html>

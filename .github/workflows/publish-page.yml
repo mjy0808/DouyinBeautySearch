@@ -26,6 +26,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Find latest collected report
         id: report
         uses: actions/github-script@v7
@@ -61,6 +64,10 @@ jobs:
               cp -R "restored-site/$directory/." "site/$directory/"
             fi
           done
+      - name: Build automatic daily list from saved data
+        run: |
+          if [ ! -f site/data/latest.json ]; then node src/cli.mjs --seed; fi
+          node scripts/migrate-reports.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

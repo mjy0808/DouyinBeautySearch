@@ -6,14 +6,14 @@ import path from 'node:path';
 import { saveReport, readJson } from '../src/storage.mjs';
 import { runPipeline } from '../src/pipeline.mjs';
 import config from '../config.json' with { type: 'json' };
-test('archive survives partial days and preserves original verification timestamps', async () => {
+test('archive survives partial days and preserves original timestamps', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'beauty-state-'));
   try {
     const old = { date: '2026-10-05', status: 'complete', items: [], generated_at: '2026-10-05T03:00:00Z' };
     const state = { reports: { [old.date]: old } };
     const report = { date: '2026-10-06', status: 'pending', items: [], candidates: [] };
     await saveReport(report, state, config, root);
-    assert.equal((await readJson(path.join(root, 'site/data/latest.json'))).status, 'pending');
+    assert.equal((await readJson(path.join(root, 'site/data/latest.json'))).status, 'partial');
     assert.equal((await readJson(path.join(root, 'site/archive/2026-10-05.json'))).generated_at, old.generated_at);
     assert.equal((await readJson(path.join(root, 'site/data/archive.json'))).length, 2);
     await fs.mkdir(path.join(root, 'seeds'), { recursive: true });
@@ -31,7 +31,7 @@ test('missing file uses fallback but corrupt state is reported', async () => {
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
 
-test('a blocked second run cannot erase the 40 candidates already saved today', async () => {
+test('a blocked forced retry preserves the daily list after importing a legacy backup', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'beauty-retry-'));
   const previousModule = process.env.PLAYWRIGHT_MODULE;
   try {
@@ -51,14 +51,15 @@ test('a blocked second run cannot erase the 40 candidates already saved today', 
     }));
     const earlier = {date:'2026-10-07',status:'pending',items:[],candidates};
     await saveReport(earlier, {seen:[],frontier:[],processed:{},reports:{}}, config, root);
-    const report = await runPipeline({root,config,now:new Date('2026-10-07T10:15:00Z')});
-    assert.equal(report.status, 'blocked');
-    assert.equal(report.candidates.length, 40);
-    assert.equal(report.stats.pending, 0);
+    const report = await runPipeline({root,config,force:true,now:new Date('2026-10-07T10:15:00Z')});
+    assert.equal(report.status, 'complete');
+    assert.equal(report.collection_status, 'blocked');
+    assert.equal(report.items.length, 20);
+    assert.equal(report.stats.collected, 0);
     const stored = await readJson(path.join(root, 'site/data/latest.json'));
-    assert.equal(stored.candidates.length, 40);
-    assert.ok(stored.candidates.every(c => c.verified_at === '2026-10-07T07:18:16Z'));
-    assert.equal((await readJson(path.join(root, 'data/pending.json'))).length, 40);
+    assert.equal(stored.items.length, 20);
+    assert.ok(stored.items.every(c => c.collected_at === '2026-10-07T07:18:16Z'));
+    assert.equal(await readJson(path.join(root, 'data/pending.json'), null), null);
   } finally {
     if (previousModule === undefined) delete process.env.PLAYWRIGHT_MODULE;
     else process.env.PLAYWRIGHT_MODULE = previousModule;

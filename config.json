@@ -7,14 +7,13 @@
   "maxDuration": 15,
   "retentionDays": 60,
   "maxPages": 140,
-  "maxReviews": 60,
-  "maxPending": 40,
   "maxSeconds": 1100,
   "pageTimeoutMs": 25000,
   "playerTimeoutMs": 20000,
   "maxConsecutiveFailures": 6,
-  "minVisionConfidence": 0.82,
-  "referenceIds": ["7693266282930828150", "7693403030155115387"],
-  "vision": { "model": "gpt-4.1-mini", "baseUrl": "https://api.openai.com/v1", "mode": "responses" },
+  "referenceIds": [
+    "7693266282930828150",
+    "7693403030155115387"
+  ],
   "workflowUrl": "https://github.com/mjy0808/DouyinBeautySearch/actions/workflows/daily-beauty.yml"
 }

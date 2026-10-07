@@ -43,35 +43,25 @@ export function metadataRejection(item, config) {
   return null;
 }
 
-export function visionAccepted(review, config) {
-  return review?.adult_woman_primary === true && review?.real_person_likely === true
-    && review?.camera_motion === true && review?.readable_frames === true
-    && review?.uncertain === false && Number.isFinite(review?.confidence)
-    && review.confidence >= config.minVisionConfidence && review.confidence <= 1
-    && typeof review.camera_note === 'string' && review.camera_note.length > 0;
-}
-
 export function rankItems(items, config) {
   return [...items].sort((a, b) =>
     Number(b.likes >= config.preferredLikes) - Number(a.likes >= config.preferredLikes)
-    || (b.style_score ?? 0) - (a.style_score ?? 0)
     || String(b.published_at).localeCompare(String(a.published_at)) || b.likes - a.likes);
 }
 
-export function mergeCandidates(previous, current, config, excluded = new Set()) {
+export function mergeItems(previous, current, config, excluded = new Set()) {
   const byId = new Map();
   for (const item of [...previous, ...current]) {
     if (!excluded.has(item.id) && !metadataRejection(item, config)) byId.set(item.id, item);
   }
-  return rankItems([...byId.values()], config).slice(0, config.maxPending);
+  return rankItems([...byId.values()], config).slice(0, config.target);
 }
 
 export function validateConfig(config) {
-  for (const key of ['target', 'minLikes', 'preferredLikes', 'maxDuration', 'retentionDays', 'maxPages', 'maxReviews', 'maxPending', 'maxSeconds', 'pageTimeoutMs']) {
+  for (const key of ['target', 'minLikes', 'preferredLikes', 'maxDuration', 'retentionDays', 'maxPages', 'maxSeconds', 'pageTimeoutMs']) {
     if (!Number.isFinite(config[key]) || config[key] <= 0) throw new Error(`Invalid config: ${key}`);
   }
   if (!Number.isInteger(config.target) || config.maxDuration > 15 || config.minLikes < 5000) throw new Error('Config weakens the requested limits');
-  if (!(config.minVisionConfidence >= 0 && config.minVisionConfidence <= 1)) throw new Error('Invalid vision confidence');
   if (!config.referenceIds?.every(validId)) throw new Error('Invalid reference IDs');
   dateInZone(new Date(), config.timezone);
   return config;

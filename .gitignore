@@ -6,3 +6,5 @@ data/
 *.log
 .DS_Store
 test-results/
+site/assets/
+site/archive/

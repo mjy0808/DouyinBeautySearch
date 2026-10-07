@@ -84,28 +84,22 @@ async function readVideoAttempt(page, id, config) {
   return { item: parseDetail(currentBody, id, media), video, recommendations: recommendations.filter(validId) };
 }
 
-export async function captureFrames(page, video, item, root = '.') {
-  const directory = path.join(root, 'data', 'frames', item.id);
+export async function captureThumbnail(page, video, item, root = '.') {
+  const directory = path.join(root, 'data', 'thumbnails');
   await fs.mkdir(directory, { recursive: true });
-  const files = [];
-  for (const [index, fraction] of [0.05, 0.35, 0.65, 0.95].entries()) {
-    const time = Math.min(item.duration_seconds - 0.08, item.duration_seconds * fraction);
-    await video.evaluate((v, time) => new Promise(resolve => {
-      const finish = () => { v.removeEventListener('seeked', finish); resolve(); };
-      v.addEventListener('seeked', finish, { once: true }); v.pause(); v.currentTime = time;
-      setTimeout(finish, 1800);
-    }), time);
-    await page.waitForTimeout(250);
-    const box = await video.boundingBox();
-    if (!box || box.height < 100 || box.width < 100) throw new Error('FRAME_UNAVAILABLE');
-    // Crop only the displayed portrait image; do not infer orientation from this box.
-    const ratio = item.width / item.height;
-    const width = Math.min(box.width, box.height * ratio);
-    const height = Math.min(box.height, box.width / ratio);
-    const clip = { x: box.x + (box.width - width) / 2, y: box.y + (box.height - height) / 2, width, height };
-    const file = path.join(directory, `${index}.jpg`);
-    await page.screenshot({ path: file, type: 'jpeg', quality: 75, clip, timeout: 5000 });
-    files.push(file);
-  }
-  return files;
+  const time = Math.min(item.duration_seconds - 0.08, item.duration_seconds * 0.35);
+  await video.evaluate((v, time) => new Promise(resolve => {
+    const finish = () => { v.removeEventListener('seeked', finish); resolve(); };
+    v.addEventListener('seeked', finish, { once: true }); v.pause(); v.currentTime = time;
+    setTimeout(finish, 1800);
+  }), time);
+  await page.waitForTimeout(250);
+  const box = await video.boundingBox();
+  if (!box || box.height < 100 || box.width < 100) throw new Error('VIDEO_THUMBNAIL_UNAVAILABLE');
+  const ratio = item.width / item.height;
+  const width = Math.min(box.width, box.height * ratio);
+  const height = Math.min(box.height, box.width / ratio);
+  const clip = { x: box.x + (box.width - width) / 2, y: box.y + (box.height - height) / 2, width, height };
+  await page.screenshot({ path: path.join(directory, `${item.id}.jpg`), type: 'jpeg', quality: 75, clip, timeout: 5000 });
+  return `assets/${item.id}.jpg`;
 }
