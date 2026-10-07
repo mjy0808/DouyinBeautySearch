@@ -17,19 +17,67 @@ export async function launchBrowser() {
   return chromium.launch({ headless: true, ...(process.env.BROWSER_EXECUTABLE ? { executablePath: process.env.BROWSER_EXECUTABLE } : {}) });
 }
 
-export async function readVideo(page, id, config) {
-  await page.goto(videoUrl(id), { waitUntil: 'domcontentloaded', timeout: config.pageTimeoutMs });
+export function sourceFailure(body, http = 200, fallback = 'VIDEO_UNAVAILABLE') {
+  if (/安全验证|请完成.{0,15}验证|拖动滑块|访问过于频繁|访问受限/.test(body)) return 'DOUYIN_VERIFICATION_REQUIRED';
+  if (/请登录后观看|登录后才可观看|请先登录才能观看/.test(body)) return 'DOUYIN_LOGIN_REQUIRED';
+  if (http >= 400) return `DOUYIN_HTTP_${http}`;
+  return fallback;
+}
+
+export function retryableSourceFailure(reason) {
+  return /^(?:VIDEO_UNAVAILABLE|VIDEO_METADATA_UNAVAILABLE|DOUYIN_NAVIGATION_TIMEOUT|DOUYIN_NAVIGATION_FAILED|DOUYIN_HTTP_5\d\d)$/.test(reason);
+}
+
+async function sourceSnapshot(page, http) {
+  return page.evaluate(http => ({
+    http, title: document.title, path: location.pathname,
+    body_excerpt: document.body.innerText.slice(0, 1800),
+    videos: [...document.querySelectorAll('video')].map(v => {
+      const box = v.getBoundingClientRect();
+      return { visible: box.width > 100 && box.height > 100, width: v.videoWidth, height: v.videoHeight,
+        duration: Number.isFinite(v.duration) ? v.duration : null, ready: v.readyState, media_error: v.error?.code ?? null };
+    })
+  }), http).catch(() => ({ http, unavailable: true }));
+}
+
+export async function readVideo(page, id, config, { root = '.' } = {}) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try { return await readVideoAttempt(page, id, config); }
+    catch (error) {
+      const source = await sourceSnapshot(page, error.http ?? null);
+      let reason = /^(VIDEO_|DOUYIN_)/.test(error.message) ? error.message
+        : error.name === 'TimeoutError' ? 'DOUYIN_NAVIGATION_TIMEOUT' : 'DOUYIN_NAVIGATION_FAILED';
+      reason = sourceFailure(source.body_excerpt ?? '', source.http ?? 200, reason);
+      if (attempt === 0 && retryableSourceFailure(reason)) {
+        console.warn(`${id}: ${reason}, retrying once`);
+        await page.waitForTimeout(1500);
+        continue;
+      }
+      const directory = path.join(root, 'data', 'diagnostics');
+      await fs.mkdir(directory, { recursive: true });
+      await fs.writeFile(path.join(directory, `${id}.json`), JSON.stringify({ reason, ...source }, null, 2));
+      await page.screenshot({ path: path.join(directory, `${id}.jpg`), type: 'jpeg', quality: 60, timeout: 5000 }).catch(() => {});
+      const failure = new Error(reason); failure.source = source; throw failure;
+    }
+  }
+}
+
+async function readVideoAttempt(page, id, config) {
+  const response = await page.goto(videoUrl(id), { waitUntil: 'domcontentloaded', timeout: config.pageTimeoutMs });
+  const http = response?.status() ?? 200;
+  if (http >= 400) { const error = new Error(`DOUYIN_HTTP_${http}`); error.http = http; throw error; }
   await page.waitForTimeout(2500);
   const body = await page.locator('body').innerText();
   if (body.includes('登录后免费畅享高清视频')) await page.mouse.click(963, 249);
   await page.waitForFunction(() => [...document.querySelectorAll('video')].some(v => {
     const rect = v.getBoundingClientRect(); return rect.width > 100 && rect.height > 100 && v.videoWidth > 0 && Number.isFinite(v.duration);
-  }), undefined, { timeout: 8000 }).catch(() => {});
+  }) || /安全验证|请完成.{0,15}验证|拖动滑块|访问过于频繁|访问受限/.test(document.body.innerText), undefined, { timeout: config.playerTimeoutMs ?? 20000 }).catch(() => {});
+  const loadedBody = await page.locator('body').innerText();
   const index = await page.locator('video').evaluateAll(largestVisibleVideoIndex);
-  if (index < 0) throw new Error(/安全验证|请完成.*验证|拖动滑块/.test(body) ? 'DOUYIN_VERIFICATION_REQUIRED' : 'VIDEO_UNAVAILABLE');
+  if (index < 0) throw new Error(sourceFailure(loadedBody, http));
   const video = page.locator('video').nth(index);
   const media = await video.evaluate(v => { v.pause(); return { width: v.videoWidth, height: v.videoHeight, duration: v.duration }; });
-  if (!media.width || !Number.isFinite(media.duration)) throw new Error(/安全验证|请完成.*验证|拖动滑块/.test(body) ? 'DOUYIN_VERIFICATION_REQUIRED' : 'VIDEO_METADATA_UNAVAILABLE');
+  if (!media.width || !Number.isFinite(media.duration)) throw new Error(sourceFailure(loadedBody, http, 'VIDEO_METADATA_UNAVAILABLE'));
   if (!new URL(page.url()).pathname.includes(`/video/${id}`)) throw new Error('VIDEO_CHANGED_DURING_LOAD');
   const currentBody = await page.locator('body').innerText();
   const recommendations = await page.locator('a[href*="/video/"]').evaluateAll(as => [...new Set(as.filter(a => /^\s*(?:付费\s*)?00:(?:0[0-9]|1[0-5])\b/.test(a.innerText)).map(a => a.href.match(/\/video\/(\d+)/)?.[1]).filter(Boolean))]);

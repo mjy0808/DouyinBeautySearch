@@ -15,12 +15,21 @@ on:
         description: '只检查抖音公开页面可访问性，不修改日报'
         default: false
         type: boolean
+      restore_run_id:
+        description: '恢复指定运行的数据备份（数字 run ID）'
+        default: ''
+        type: string
+      restore_only:
+        description: '仅恢复和发布备份，不进行新采集'
+        default: false
+        type: boolean
   push:
     branches: [main]
     paths: ['src/**', 'seeds/**', 'config.json', 'package*.json', '.github/workflows/daily-beauty.yml']
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -49,11 +58,32 @@ jobs:
           restore-keys: beauty-state-
       - name: Verify collector and report logic
         run: npm test
+      - name: Validate recovery input
+        if: inputs.restore_run_id != '' || inputs.restore_only == true
+        env:
+          RESTORE_RUN_ID: ${{ inputs.restore_run_id }}
+        run: '[[ "$RESTORE_RUN_ID" =~ ^[0-9]+$ ]]'
+      - name: Download collection backup
+        if: inputs.restore_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: beauty-data-${{ inputs.restore_run_id }}
+          run-id: ${{ inputs.restore_run_id }}
+          github-token: ${{ github.token }}
+          path: restored-data
+      - name: Restore collection backup
+        if: inputs.restore_run_id != ''
+        run: |
+          test -f restored-data/state.json
+          mkdir -p data
+          cp -R restored-data/. data/
       - name: Install browser
+        if: inputs.restore_only != true
         run: npx playwright install --with-deps chromium
       - name: Build verified initial report
         run: npm run build
       - name: Collect daily candidates
+        if: inputs.restore_only != true
         env:
           VISION_API_KEY: ${{ secrets.VISION_API_KEY }}
           VISION_BASE_URL: ${{ vars.VISION_BASE_URL }}
@@ -82,6 +112,7 @@ jobs:
             data/pending.json
             data/probe.json
             data/run-errors.json
+            data/diagnostics/
             data/thumbnails/
           retention-days: 60
           if-no-files-found: warn

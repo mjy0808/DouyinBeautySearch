@@ -58,6 +58,14 @@ export function rankItems(items, config) {
     || String(b.published_at).localeCompare(String(a.published_at)) || b.likes - a.likes);
 }
 
+export function mergeCandidates(previous, current, config, excluded = new Set()) {
+  const byId = new Map();
+  for (const item of [...previous, ...current]) {
+    if (!excluded.has(item.id) && !metadataRejection(item, config)) byId.set(item.id, item);
+  }
+  return rankItems([...byId.values()], config).slice(0, config.maxPending);
+}
+
 export function validateConfig(config) {
   for (const key of ['target', 'minLikes', 'preferredLikes', 'maxDuration', 'retentionDays', 'maxPages', 'maxReviews', 'maxPending', 'maxSeconds', 'pageTimeoutMs']) {
     if (!Number.isFinite(config[key]) || config[key] <= 0) throw new Error(`Invalid config: ${key}`);

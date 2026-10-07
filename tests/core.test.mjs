@@ -1,8 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseCount, dateInZone, parseDetail, metadataRejection, visionAccepted, rankItems, validateConfig, videoUrl } from '../src/core.mjs';
+import { parseCount, dateInZone, parseDetail, metadataRejection, visionAccepted, rankItems, mergeCandidates, validateConfig, videoUrl } from '../src/core.mjs';
 import config from '../config.json' with { type: 'json' };
 const good = { id: '7692412559458533049', author: '一扣', caption: '嗯……', published_at: '2026-10-03 20:09', likes: 92000, width: 576, height: 1024, duration_seconds: 6.566667, ai_label: false };
+test('failed intraday retry keeps captured candidates and their original verification times', () => {
+  const earlier = { ...good, verified_at: '2026-10-07T07:18:16Z', thumbnail: 'assets/7692412559458533049-1.jpg' };
+  assert.deepEqual(mergeCandidates([earlier], [], config), [earlier]);
+  const refreshed = { ...earlier, likes: 95000, verified_at: '2026-10-07T10:00:00Z' };
+  assert.deepEqual(mergeCandidates([earlier], [refreshed], config), [refreshed]);
+  assert.deepEqual(mergeCandidates([earlier], [], config, new Set([earlier.id])), []);
+  assert.deepEqual(mergeCandidates([{ ...earlier, duration_seconds: 16 }], [], config), []);
+});
 test('count parsing accepts Douyin abbreviations without inventing missing counts', () => {
   assert.equal(parseCount('1.3万'), 13000); assert.equal(parseCount('9,070'), 9070); assert.equal(parseCount('1.3亿'), 130000000);
   assert.equal(parseCount(undefined), null); assert.equal(parseCount('获赞9.2万'), null);
