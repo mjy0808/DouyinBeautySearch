@@ -30,3 +30,38 @@ test('missing file uses fallback but corrupt state is reported', async () => {
     await assert.rejects(readJson(path.join(root, 'bad.json'), {}));
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 });
+
+test('a blocked second run cannot erase the 40 candidates already saved today', async () => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'beauty-retry-'));
+  const previousModule = process.env.PLAYWRIGHT_MODULE;
+  try {
+    const fake = path.join(root, 'blocked-browser.cjs');
+    await fs.writeFile(fake, `module.exports = { chromium: { launch: async () => ({
+      newPage: async () => ({
+        setDefaultTimeout() {}, goto: async () => ({status: () => 403}),
+        evaluate: async () => ({http:403, body_excerpt:'Access denied', videos:[]}),
+        screenshot: async () => {}, waitForTimeout: async () => {}
+      }), close: async () => {}
+    }) } };`);
+    process.env.PLAYWRIGHT_MODULE = fake;
+    const candidates = Array.from({length:40}, (_, i) => ({
+      id: String(7692412559458533049n + BigInt(i)), author:'测试作者', caption:'运镜',
+      published_at:'2026-10-07 14:00', likes:12000, width:576, height:1024,
+      duration_seconds:9, verified_at:'2026-10-07T07:18:16Z'
+    }));
+    const earlier = {date:'2026-10-07',status:'pending',items:[],candidates};
+    await saveReport(earlier, {seen:[],frontier:[],processed:{},reports:{}}, config, root);
+    const report = await runPipeline({root,config,now:new Date('2026-10-07T10:15:00Z')});
+    assert.equal(report.status, 'blocked');
+    assert.equal(report.candidates.length, 40);
+    assert.equal(report.stats.pending, 0);
+    const stored = await readJson(path.join(root, 'site/data/latest.json'));
+    assert.equal(stored.candidates.length, 40);
+    assert.ok(stored.candidates.every(c => c.verified_at === '2026-10-07T07:18:16Z'));
+    assert.equal((await readJson(path.join(root, 'data/pending.json'))).length, 40);
+  } finally {
+    if (previousModule === undefined) delete process.env.PLAYWRIGHT_MODULE;
+    else process.env.PLAYWRIGHT_MODULE = previousModule;
+    await fs.rm(root, {recursive:true,force:true});
+  }
+});
